@@ -2,6 +2,7 @@
 Without any action to data, ref:https://tianchi.aliyun.com/forum/new_articleDetail.html?spm=5176.8366600.0.0.4bcac0948RI9a9&raceId=231641&postsId=3809
 '''
 import pandas as pd
+import Time_convert as Tc
 import matplotlib.pyplot as plt
 import seaborn as sns
 import lightgbm as lgb
@@ -14,39 +15,6 @@ from sklearn.model_selection import ShuffleSplit
 from sklearn import cross_validation
 from sklearn.metrics import mean_squared_error
 
-def series_to_supervised(data, n_in=1, n_out=1, dropnan=True):
-    """
-    Frame a time series as a supervised learning dataset.
-    Arguments:
-        data: Sequence of observations as a list or NumPy array.
-        n_in: Number of lag observations as input (X).
-        n_out: Number of observations as output (y).
-        dropnan: Boolean whether or not to drop rows with NaN values.
-    Returns:
-        Pandas DataFrame of series framed for supervised learning.
-    """
-    n_vars = 1 if type(data) is list else data.shape[1] # n_var: number of cols(attribute)
-    df = DataFrame(data)
-    cols, names = list(), list()
-    # input sequence (t-n, ... t-1)
-    for i in range(n_in, 0, -1):
-        cols.append(df.shift(i))
-        names += [('var%d(t-%d)' % (j+1, i)) for j in range(n_vars)]
-    # forecast sequence (t, t+1, ... t+n)
-    for i in range(0, n_out):
-        cols.append(df.shift(-i))
-        if i == 0:
-            names += [('var%d(t)' % (j+1)) for j in range(n_vars)]
-        else:
-            names += [('var%d(t+%d)' % (j+1, i)) for j in range(n_vars)]
-    # put it all together
-    agg = concat(cols, axis=1)
-    agg.columns = names
-    # drop rows with NaN values
-    if dropnan:
-        agg.dropna(inplace=True)
-    return agg
-
 filename = 'data/'
 train = pd.read_table(filename + 'train_20171215.txt', engine='python')
 test_A = pd.read_table(filename + 'test_A_20171225.txt', engine='python')
@@ -57,7 +25,7 @@ remove the label'brand'
 train = train.groupby(['date', 'day_of_week'], as_index=False).cnt.sum()
 time_cnt = list(train['cnt'].values)
 #time_cnt.append(0)
-time2sup = series_to_supervised(data=time_cnt, n_in=276, dropnan =True)
+time2sup = Tc.series_to_supervised(data=time_cnt, n_in=276, dropnan =True)
 
 index_split = len(time_cnt)*0.732
 x_train = time2sup[time2sup.index<index_split]
@@ -111,7 +79,7 @@ print ("%d vs %d" %(result_convert[-1], y_test[-1]))
 lens_A = len(test_A)
 for i in range(lens_A):
     time_cnt.append(0)
-    time2sup = series_to_supervised(data=time_cnt, n_in=276, dropnan =True)
+    time2sup = Tc.series_to_supervised(data=time_cnt, n_in=276, dropnan =True)
     index_split = len(time_cnt)*0.732
     #x_train = time2sup[time2sup.index<index_split]
     x_test = time2sup[time2sup.index>index_split]
